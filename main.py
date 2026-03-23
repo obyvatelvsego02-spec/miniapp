@@ -4,6 +4,7 @@ from aiogram.types import Update
 
 from bot import bot, dp
 from db import Base, engine
+from models import Operation
 from services import get_or_create
 
 app = FastAPI()
@@ -44,6 +45,32 @@ def dashboard(chat_id: int):
 
     spread = obj.income - obj.fixed
 
+    operations = (
+        db.query(Operation)
+        .filter_by(chat_id=chat_id)
+        .order_by(Operation.created_at.desc())
+        .all()
+    )
+
+    history = {
+        "payouts": [],
+        "income": [],
+        "fixed": [],
+    }
+
+    for op in operations:
+        item = {
+            "amount": op.amount,
+            "at": op.created_at.strftime("%d.%m %H:%M"),
+        }
+
+        if op.type == "income":
+            history["income"].append(item)
+        elif op.type == "fixed":
+            history["fixed"].append(item)
+        elif op.type == "payouts":
+            history["payouts"].append(item)
+
     result = {
         "balance": obj.balance,
         "income": obj.income,
@@ -52,11 +79,7 @@ def dashboard(chat_id: int):
         "spread": spread,
         "chat_title": f"Чат {chat_id}",
         "opening_balance": 0,
-        "history": {
-    "payouts": [{"amount": obj.payouts, "at": "Сейчас"}] if obj.payouts else [],
-    "income": [{"amount": obj.income, "at": "Сейчас"}] if obj.income else [],
-    "fixed": [{"amount": obj.fixed, "at": "Сейчас"}] if obj.fixed else [],
-},
+        "history": history,
     }
 
     db.close()
