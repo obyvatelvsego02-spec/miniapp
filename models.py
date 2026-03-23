@@ -1,5 +1,7 @@
-from sqlalchemy import Column, Integer, BigInteger
+from sqlalchemy import Column, Integer, BigInteger, String, DateTime
+from datetime import datetime
 from db import Base
+
 
 class ChatData(Base):
     __tablename__ = "chat_data"
@@ -11,3 +13,13 @@ class ChatData(Base):
     income = Column(Integer, default=0)
     fixed = Column(Integer, default=0)
     payouts = Column(Integer, default=0)
+
+
+class Operation(Base):
+    __tablename__ = "operations"
+
+    id = Column(Integer, primary_key=True)
+    chat_id = Column(BigInteger, index=True)
+    type = Column(String, nullable=False)   # income / fixed / payouts
+    amount = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
