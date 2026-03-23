@@ -52,27 +52,22 @@ async def handle(msg: types.Message):
         obj, db = get_or_create(msg.chat.id)
 
         if cmd == "приход":
-            obj.balance += amount
-            obj.income += amount
-            add_operation(db, msg.chat.id, "income", amount)
-            reply_text = f"✅ Приход: {amount}"
+    obj.balance += amount
+    obj.income += amount
+    add_operation(db, msg.chat.id, "income", amount)
 
-        elif cmd == "фикс":
-            obj.fixed += amount
-            add_operation(db, msg.chat.id, "fixed", amount)
-            reply_text = f"✅ Фикс: {amount}"
+elif cmd == "фикс":
+    obj.fixed += amount
+    add_operation(db, msg.chat.id, "fixed", amount)
 
-        elif cmd == "выдача":
-            obj.balance -= amount
-            obj.payouts += amount
-            add_operation(db, msg.chat.id, "payouts", amount)
-            reply_text = f"✅ Выдача: {amount}"
+elif cmd == "выдача":
+    obj.balance -= amount
+    obj.payouts += amount
+    add_operation(db, msg.chat.id, "payouts", amount)
 
-        db.commit()
-        db.close()
-
-        await msg.answer(reply_text)
-        return
+db.commit()
+db.close()
+return
 
     loose_match = LOOSE_RE.match(lower_text)
     if not loose_match:
