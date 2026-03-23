@@ -1,4 +1,5 @@
 const tg = window.Telegram?.WebApp;
+
 if (tg) {
   tg.ready();
   tg.expand();
@@ -9,6 +10,7 @@ if (tg) {
 }
 
 const byId = (id) => document.getElementById(id);
+
 const fmt = (value) => {
   const num = Number(value || 0);
   return num.toLocaleString('ru-RU', {
@@ -74,7 +76,12 @@ function renderList(tab, data) {
 
   if (tab === 'balance') {
     body.innerHTML = [
-      rowTemplate('Текущий баланс', 'После всех операций', data.balance, data.balance < 0 ? 'negative' : 'positive'),
+      rowTemplate(
+        'Текущий баланс',
+        'После всех операций',
+        data.balance,
+        data.balance < 0 ? 'negative' : 'positive'
+      ),
       rowTemplate('Старт дня', 'Остаток на начало дня', data.opening_balance),
       rowTemplate('Выдачи', 'Списано за день', -Math.abs(data.payouts), 'negative'),
     ].join('');
@@ -109,6 +116,7 @@ function renderList(tab, data) {
       income: 'positive',
       fixed: 'neutral',
     };
+
     return rowTemplate(
       `${labels[tab]} #${items.length - index}`,
       item.at || 'Без времени',
@@ -118,45 +126,84 @@ function renderList(tab, data) {
   }).join('');
 }
 
-function render(data) {
+function render(data, chatId) {
   currentData = data;
+
   setMetric('balanceValue', data.balance);
   setMetric('spreadValue', data.spread);
   setMetric('payoutsValue', data.payouts);
   setMetric('incomeValue', data.income);
   setMetric('fixedValue', data.fixed);
-  byId('chatTitle').textContent = data.chat_title || 'Группа';
+
+  byId('chatTitle').textContent = `${data.chat_title || 'Группа'} · chat_id: ${chatId}`;
+
   renderList(currentTab, data);
 }
 
-async function load() {
+function resolveChatId() {
   const urlParams = new URLSearchParams(location.search);
-const directChatId = urlParams.get('chat_id');
-const startParam = tg?.initDataUnsafe?.start_param || urlParams.get('startapp') || '';
- const match = String(startParam).match(/group_(-?\d+)/);
-const chatId = directChatId || (match ? match[1] : null);
+  const directChatId = urlParams.get('chat_id');
+  const startParam = tg?.initDataUnsafe?.start_param || urlParams.get('startapp') || '';
+  const match = String(startParam).match(/group_(-?\d+)/);
 
-if (!chatId) {
-  byId('historyBody').innerHTML = emptyState('Нет chat_id в ссылке');
-  byId('chatTitle').textContent = 'Открой дашборд из группы';
-  return;
+  return directChatId || (match ? match[1] : null);
 }
+
+async function load() {
+  const chatId = resolveChatId();
+
+  if (!chatId) {
+    byId('historyBody').innerHTML = emptyState('Нет chat_id в ссылке');
+    byId('chatTitle').textContent = 'Открой дашборд из группы';
+    return;
+  }
+
+  const apiUrl = `https://miniapp-production-2f44.up.railway.app/api/dashboard/${encodeURIComponent(chatId)}?t=${Date.now()}`;
+
   try {
-    const res = await fetch(`https://miniapp-production-2f44.up.railway.app/api/dashboard/${encodeURIComponent(chatId)}`);
-    if (!res.ok) throw new Error('load failed');
+    const res = await fetch(apiUrl, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0',
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`load failed: ${res.status}`);
+    }
+
     const data = await res.json();
-    render(data);
+
+    console.log('DASHBOARD LOAD OK', {
+      chatId,
+      apiUrl,
+      data,
+    });
+
+    render(data, chatId);
   } catch (e) {
+    console.error('DASHBOARD LOAD ERROR', {
+      chatId,
+      apiUrl,
+      error: e,
+    });
+
     byId('historyBody').innerHTML = emptyState('Не удалось загрузить данные');
-    byId('chatTitle').textContent = 'Проверь, есть ли операции в этом чате';
+    byId('chatTitle').textContent = `Проверь данные · chat_id: ${chatId}`;
   }
 }
 
 byId('refreshBtn').addEventListener('click', load);
+
 document.querySelectorAll('[data-open]').forEach((btn) => {
   btn.addEventListener('click', () => {
     setTabs(btn.dataset.open);
-    if (currentData) renderList(currentTab, currentData);
+    if (currentData) {
+      renderList(currentTab, currentData);
+    }
   });
 });
 
