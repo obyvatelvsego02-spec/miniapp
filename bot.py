@@ -4,7 +4,7 @@ from difflib import get_close_matches
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from services import get_or_create, add_operation
+from services import get_or_create, add_operation, clear_operations
 
 BOT_TOKEN = "8748520635:AAFmBhQuFP-U31dDlwcHddpObPMzN27hqLI"
 
@@ -14,7 +14,7 @@ dp = Dispatcher()
 VALID_COMMANDS = ["приход", "фикс", "выдача"]
 
 STRICT_RE = re.compile(r"^(приход|фикс|выдача)\s+(\d+)$", re.IGNORECASE)
-LOOSE_RE = re.compile(r"^([а-яёa-z]+)\s*(.*)$", re.IGNORECASE)
+LOOSE_RE = re.compile(r"^([а-яёa-z_\/]+)\s*(.*)$", re.IGNORECASE)
 
 
 def closest_command(word: str):
@@ -42,6 +42,48 @@ async def handle(msg: types.Message):
             ]
         )
         await msg.answer("Открой дашборд:", reply_markup=kb)
+        return
+
+    if lower_text.startswith("/close_day"):
+        obj, db = get_or_create(msg.chat.id)
+
+        summary_text = (
+            "📊 Итоги дня:\n"
+            f"Баланс: {obj.balance}\n"
+            f"Приход: {obj.income}\n"
+            f"Фикс: {obj.fixed}\n"
+            f"Выдачи: {obj.payouts}\n"
+            f"Спред: {obj.income - obj.fixed}"
+        )
+
+        obj.opening_balance = obj.balance
+        obj.income = 0
+        obj.fixed = 0
+        obj.payouts = 0
+
+        clear_operations(db, msg.chat.id)
+
+        db.commit()
+        db.close()
+
+        await msg.answer(summary_text)
+        return
+
+    if lower_text.startswith("/reset_chat"):
+        obj, db = get_or_create(msg.chat.id)
+
+        obj.opening_balance = 0
+        obj.balance = 0
+        obj.income = 0
+        obj.fixed = 0
+        obj.payouts = 0
+
+        clear_operations(db, msg.chat.id)
+
+        db.commit()
+        db.close()
+
+        await msg.answer("♻️ Чат полностью обнулён")
         return
 
     strict_match = STRICT_RE.match(lower_text)
