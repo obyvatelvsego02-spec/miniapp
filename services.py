@@ -1,5 +1,6 @@
 from db import SessionLocal
-from models import ChatData
+from models import ChatData, Operation
+
 
 def get_or_create(chat_id):
     db = SessionLocal()
@@ -12,3 +13,12 @@ def get_or_create(chat_id):
         db.refresh(obj)
 
     return obj, db
+
+
+def add_operation(db, chat_id, op_type, amount):
+    op = Operation(
+        chat_id=chat_id,
+        type=op_type,
+        amount=amount,
+    )
+    db.add(op)
