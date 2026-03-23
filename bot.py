@@ -1,12 +1,33 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
-from aiogram import Bot, Dispatcher, types
 import re
+
+from aiogram import Bot, Dispatcher, types
+from aiogram.filters import Command
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+
 from services import get_or_create
 
 BOT_TOKEN = "8748520635:AAFmBhQuFP-U31dDlwcHddpObPMzN27hqLI"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
+
+
+@dp.message(Command("dashboard"))
+async def dashboard(msg: types.Message):
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Открыть дашборд",
+                    web_app=WebAppInfo(
+                        url=f"https://miniapp-production-2f44.up.railway.app/?startapp=group_{msg.chat.id}"
+                    ),
+                )
+            ]
+        ]
+    )
+    await msg.answer("Открой дашборд:", reply_markup=kb)
+
 
 @dp.message()
 async def handle(msg: types.Message):
@@ -37,16 +58,5 @@ async def handle(msg: types.Message):
 
     db.commit()
     db.close()
-    await msg.answer(f"OK chat_id={msg.chat.id} | {cmd} {amount}")
 
-@dp.message(commands=["dashboard"])
-async def dashboard(msg: types.Message):
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(
-            text="Открыть дашборд",
-            web_app=WebAppInfo(
-                url=f"https://miniapp-production-2f44.up.railway.app/?startapp=group_{msg.chat.id}"
-            )
-        )]
-    ])
-    await msg.answer("Открой дашборд:", reply_markup=kb)
+    await msg.answer(f"OK chat_id={msg.chat.id} | {cmd} {amount}")
