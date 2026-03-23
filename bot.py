@@ -1,12 +1,25 @@
 import re
+from difflib import get_close_matches
 
 from aiogram import Bot, Dispatcher, types
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
 from services import get_or_create, add_operation
 
-BOT_TOKEN = "8748520635:AAFmBhQuFP-U31dDlwcHddpObPMzN27hqLI"
+BOT_TOKEN = "ТУТ_ТВОЙ_ТОКЕН"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
+
+VALID_COMMANDS = ["приход", "фикс", "выдача"]
+
+STRICT_RE = re.compile(r"^(приход|фикс|выдача)\s+(\d+)$", re.IGNORECASE)
+LOOSE_RE = re.compile(r"^([а-яёa-z]+)\s*(.*)$", re.IGNORECASE)
+
+
+def closest_command(word: str):
+    matches = get_close_matches(word.lower(), VALID_COMMANDS, n=1, cutoff=0.7)
+    return matches[0] if matches else None
 
 
 @dp.message()
@@ -14,38 +27,73 @@ async def handle(msg: types.Message):
     if not msg.text:
         return
 
-    text = msg.text.lower().strip()
+    text = msg.text.strip()
+    lower_text = text.lower()
 
-    if text.startswith("/dashboard"):
-        await msg.answer(
-            f"Открой дашборд:\nhttps://t.me/OnyxKent_bot/dashboard?startapp=group_{msg.chat.id}"
+    if lower_text.startswith("/dashboard"):
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="Открыть дашборд",
+                        url=f"https://t.me/OnyxKent_bot/dashboard?startapp=group_{msg.chat.id}",
+                    )
+                ]
+            ]
         )
+        await msg.answer("Открой дашборд:", reply_markup=kb)
         return
 
-    match = re.match(r"^(приход|фикс|выдача)\s+(\d+)$", text)
-    if not match:
+    strict_match = STRICT_RE.match(lower_text)
+    if strict_match:
+        cmd, amount = strict_match.groups()
+        amount = int(amount)
+
+        obj, db = get_or_create(msg.chat.id)
+
+        if cmd == "приход":
+            obj.balance += amount
+            obj.income += amount
+            add_operation(db, msg.chat.id, "income", amount)
+            reply_text = f"✅ Приход: {amount}"
+
+        elif cmd == "фикс":
+            obj.fixed += amount
+            add_operation(db, msg.chat.id, "fixed", amount)
+            reply_text = f"✅ Фикс: {amount}"
+
+        elif cmd == "выдача":
+            obj.balance -= amount
+            obj.payouts += amount
+            add_operation(db, msg.chat.id, "payouts", amount)
+            reply_text = f"✅ Выдача: {amount}"
+
+        db.commit()
+        db.close()
+
+        await msg.answer(reply_text)
         return
 
-    cmd, amount = match.groups()
-    amount = int(amount)
+    loose_match = LOOSE_RE.match(lower_text)
+    if not loose_match:
+        return
 
-    obj, db = get_or_create(msg.chat.id)
+    maybe_cmd, rest = loose_match.groups()
+    suggestion = closest_command(maybe_cmd)
 
-    if cmd == "приход":
-        obj.balance += amount
-        obj.income += amount
-        add_operation(db, msg.chat.id, "income", amount)
-
-    elif cmd == "фикс":
-        obj.fixed += amount
-        add_operation(db, msg.chat.id, "fixed", amount)
-
-    elif cmd == "выдача":
-        obj.balance -= amount
-        obj.payouts += amount
-        add_operation(db, msg.chat.id, "payouts", amount)
-
-    db.commit()
-    db.close()
-
-    await msg.answer(f"OK chat_id={msg.chat.id} | {cmd} {amount}")
+    if suggestion and maybe_cmd not in VALID_COMMANDS:
+        if rest.strip().isdigit():
+            await msg.answer(
+                f"❌ Похоже, команда написана с ошибкой.\n"
+                f"Попробуй так: `{suggestion} {rest.strip()}`",
+                parse_mode="Markdown",
+            )
+        else:
+            await msg.answer(
+                "❌ Неверный формат.\n"
+                "Используй:\n"
+                "`приход 100`\n"
+                "`фикс 50`\n"
+                "`выдача 20`",
+                parse_mode="Markdown",
+            )
