@@ -19,20 +19,10 @@ async def handle(msg: types.Message):
     text = msg.text.lower().strip()
 
     if text.startswith("/dashboard"):
-        kb = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text="Открыть дашборд",
-                        web_app=WebAppInfo(
-                            url=f"https://miniapp-phi-umber.vercel.app/?chat_id={msg.chat.id}"
-                        ),
-                    )
-                ]
-            ]
-        )
-        await msg.answer("Открой дашборд:", reply_markup=kb)
-        return
+    await msg.answer(
+        f"Открой дашборд:\nhttps://t.me/OnyxKent_bot/dashboard?startapp=group_{msg.chat.id}"
+    )
+    return
 
     match = re.match(r"^(приход|фикс|выдача)\s+(\d+)$", text)
     if not match:
