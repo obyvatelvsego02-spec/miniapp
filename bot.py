@@ -7,7 +7,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from services import get_or_create, add_operation, clear_operations
 
-BOT_TOKEN = "ТВОЙ_ТЕКУЩИЙ_ТОКЕН_БОТА"
+BOT_TOKEN = "8748520635:AAFmBhQuFP-U31dDlwcHddpObPMzN27hqLI"
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
