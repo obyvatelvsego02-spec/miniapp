@@ -22,3 +22,6 @@ def add_operation(db, chat_id, op_type, amount):
         amount=amount,
     )
     db.add(op)
+    
+def clear_operations(db, chat_id):
+    db.query(Operation).filter_by(chat_id=chat_id).delete()
