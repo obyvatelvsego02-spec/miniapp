@@ -10,8 +10,6 @@ BOT_TOKEN = "8748520635:AAFmBhQuFP-U31dDlwcHddpObPMzN27hqLI"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
-
-
 @dp.message(Command("dashboard"))
 async def dashboard(msg: types.Message):
     kb = InlineKeyboardMarkup(
@@ -27,6 +25,8 @@ async def dashboard(msg: types.Message):
         ]
     )
     await msg.answer("Открой дашборд:", reply_markup=kb)
+
+
 
 
 @dp.message()
