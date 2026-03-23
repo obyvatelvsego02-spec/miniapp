@@ -3,7 +3,7 @@ import re
 from aiogram import Bot, Dispatcher, types
 from services import get_or_create
 
-BOT_TOKEN = "ТУТ_ТВОЙ_ТОКЕН"
+BOT_TOKEN = "8748520635:AAFmBhQuFP-U31dDlwcHddpObPMzN27hqLI"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
