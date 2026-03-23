@@ -130,15 +130,17 @@ function render(data) {
 }
 
 async function load() {
-  const startParam = tg?.initDataUnsafe?.start_param || new URLSearchParams(location.search).get('startapp') || '';
-  const match = String(startParam).match(/group_(-?\d+)/);
-  if (!match) {
-    byId('historyBody').innerHTML = emptyState('Нет chat_id в ссылке');
-    byId('chatTitle').textContent = 'Открой дашборд из группы';
-    return;
-  }
+  const urlParams = new URLSearchParams(location.search);
+const directChatId = urlParams.get('chat_id');
+const startParam = tg?.initDataUnsafe?.start_param || urlParams.get('startapp') || '';
+ const match = String(startParam).match(/group_(-?\d+)/);
+const chatId = directChatId || (match ? match[1] : null);
 
-  const chatId = match[1];
+if (!chatId) {
+  byId('historyBody').innerHTML = emptyState('Нет chat_id в ссылке');
+  byId('chatTitle').textContent = 'Открой дашборд из группы';
+  return;
+}
   try {
     const res = await fetch(`https://miniapp-production-2f44.up.railway.app/api/dashboard/${encodeURIComponent(chatId)}`);
     if (!res.ok) throw new Error('load failed');
