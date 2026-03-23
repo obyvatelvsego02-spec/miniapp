@@ -30,76 +30,109 @@ app.add_middleware(
 
 Base.metadata.create_all(bind=engine)
 
-logger.info("MAIN.PY LOADED | version=debug-2026-03-24-01")
-
 
 @app.get("/")
 def root():
-    logger.info("ROOT HIT")
     return {"ok": True}
 
 
 @app.post("/webhook")
 async def webhook(req: Request):
-    try:
-        data = await req.json()
-        logger.info("WEBHOOK HIT | keys=%s", list(data.keys()))
-        logger.info("WEBHOOK RAW UPDATE TYPE | has_message=%s", "message" in data)
-
-        update = Update(**data)
-        await dp.feed_update(bot, update)
-
-        logger.info("WEBHOOK PROCESSED OK")
-        return {"ok": True}
-    except Exception:
-        logger.exception("WEBHOOK FAILED")
-        return {"ok": False}
+    data = await req.json()
+    logger.info("WEBHOOK HIT | keys=%s", list(data.keys()))
+    update = Update(**data)
+    await dp.feed_update(bot, update)
+    return {"ok": True}
 
 
 @app.get("/api/dashboard/{chat_id}")
 def dashboard(chat_id: int):
-    logger.info("DASHBOARD HIT | chat_id=%s", chat_id)
-
     obj, db = get_or_create(chat_id)
-    spread = obj.income - obj.fixed
+    try:
+        spread = obj.income - obj.fixed
 
-    operations = (
-        db.query(Operation)
-        .filter_by(chat_id=chat_id)
-        .order_by(Operation.created_at.desc())
-        .all()
-    )
+        operations = (
+            db.query(Operation)
+            .filter_by(chat_id=chat_id)
+            .order_by(Operation.created_at.desc())
+            .all()
+        )
 
-    history = {
-        "payouts": [],
-        "income": [],
-        "fixed": [],
-    }
-
-    for op in operations:
-        item = {
-            "amount": op.amount,
-            "at": op.created_at.strftime("%d.%m %H:%M"),
+        history = {
+            "payouts": [],
+            "income": [],
+            "fixed": [],
         }
 
-        if op.type == "income":
-            history["income"].append(item)
-        elif op.type == "fixed":
-            history["fixed"].append(item)
-        elif op.type == "payouts":
-            history["payouts"].append(item)
+        for op in operations:
+            item = {
+                "amount": op.amount,
+                "at": op.created_at.strftime("%d.%m %H:%M"),
+            }
 
-    result = {
-        "balance": obj.balance,
-        "income": obj.income,
-        "fixed": obj.fixed,
-        "payouts": obj.payouts,
-        "spread": spread,
-        "chat_title": f"Чат {chat_id}",
-        "opening_balance": 0,
-        "history": history,
-    }
+            if op.type == "income":
+                history["income"].append(item)
+            elif op.type == "fixed":
+                history["fixed"].append(item)
+            elif op.type == "payouts":
+                history["payouts"].append(item)
 
-    db.close()
-    logger.info("DASHBOARD OK | chat_id=%s", chat_id)
-    return result
+        result = {
+            "balance": obj.balance,
+            "income": obj.income,
+            "fixed": obj.fixed,
+            "payouts": obj.payouts,
+            "spread": spread,
+            "chat_title": f"Чат {chat_id}",
+            "opening_balance": obj.opening_balance or 0,
+            "history": history,
+        }
+
+        logger.info(
+            "DASHBOARD | chat_id=%s | balance=%s | income=%s | fixed=%s | payouts=%s | ops=%s",
+            chat_id,
+            obj.balance,
+            obj.income,
+            obj.fixed,
+            obj.payouts,
+            len(operations),
+        )
+
+        return result
+    finally:
+        db.close()
+
+
+@app.get("/api/debug/{chat_id}")
+def debug_chat(chat_id: int):
+    obj, db = get_or_create(chat_id)
+    try:
+        operations = (
+            db.query(Operation)
+            .filter_by(chat_id=chat_id)
+            .order_by(Operation.created_at.desc())
+            .all()
+        )
+
+        return {
+            "chat_id": chat_id,
+            "chat_data": {
+                "opening_balance": obj.opening_balance,
+                "balance": obj.balance,
+                "income": obj.income,
+                "fixed": obj.fixed,
+                "payouts": obj.payouts,
+            },
+            "operations_count": len(operations),
+            "operations": [
+                {
+                    "id": op.id,
+                    "type": op.type,
+                    "amount": op.amount,
+                    "created_at": op.created_at.isoformat() if op.created_at else None,
+                }
+                for op in operations[:20]
+            ],
+        }
+    finally:
+        db.close()
