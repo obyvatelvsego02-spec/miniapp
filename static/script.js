@@ -140,7 +140,7 @@ async function load() {
 
   const chatId = match[1];
   try {
-    const res = await fetch(`/api/chat/${encodeURIComponent(chatId)}`);
+    const res = await fetch(`/api/dashboard/${encodeURIComponent(chatId)}`);
     if (!res.ok) throw new Error('load failed');
     const data = await res.json();
     render(data);
