@@ -10,7 +10,7 @@ BOT_TOKEN = "8748520635:AAFmBhQuFP-U31dDlwcHddpObPMzN27hqLI"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
-@dp.message(Command("dashboard"))
+@dp.message(lambda msg: msg.text and msg.text.lower().startswith("/dashboard"))
 async def dashboard(msg: types.Message):
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
