@@ -8,6 +8,8 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from services import get_or_create, add_operation, clear_operations
 
 BOT_TOKEN = "8748520635:AAFmBhQuFP-U31dDlwcHddpObPMzN27hqLI"
+BOT_USERNAME = "OnyxKent_bot"
+BOT_APP_SHORT_NAME = "dashboard"
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -16,13 +18,27 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
 VALID_COMMANDS = ["приход", "фикс", "выдача"]
-STRICT_RE = re.compile(r"^(приход|фикс|выдача)\s+(\d+)$", re.IGNORECASE)
-LOOSE_RE = re.compile(r"^([а-яёa-z_\/]+)\s*(.*)$", re.IGNORECASE)
+
+STRICT_RE = re.compile(
+    r"^(приход|фикс|выдача)\s+(\d+(?:[.,]\d+)?)$",
+    re.IGNORECASE
+)
+
+LOOSE_RE = re.compile(
+    r"^(\S+)\s+(\d+(?:[.,]\d+)?)$",
+    re.IGNORECASE
+)
+
+CYR_RE = re.compile(r"^[А-Яа-яЁё]+$")
 
 
 def closest_command(word: str):
     matches = get_close_matches(word.lower(), VALID_COMMANDS, n=1, cutoff=0.7)
     return matches[0] if matches else None
+
+
+def amount_value(raw: str) -> float:
+    return float(raw.replace(",", "."))
 
 
 @dp.message()
@@ -33,35 +49,46 @@ async def handle(msg: types.Message):
     text = msg.text.strip()
     lower_text = text.lower()
 
+    # /dashboard
     if lower_text.startswith("/dashboard"):
+        payload = f"group_{msg.chat.id}"
+        url = f"https://t.me/{BOT_USERNAME}/{BOT_APP_SHORT_NAME}?startapp={payload}"
+
         kb = InlineKeyboardMarkup(
             inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text="Открыть дашборд",
-                        url=f"https://t.me/OnyxKent_bot/dashboard?startapp=group_{msg.chat.id}",
-                    )
-                ]
+                [InlineKeyboardButton(text="Открыть дашборд", url=url)]
             ]
         )
-        await msg.answer("Открой дашборд:", reply_markup=kb)
+        await msg.answer("📊 Дашборд группы", reply_markup=kb)
         return
 
+    # /close_day
     if lower_text.startswith("/close_day"):
         db = None
         try:
             obj, db = get_or_create(msg.chat.id)
 
+            spread = obj.income - obj.fixed
+            if spread < 0:
+                await msg.answer(
+                    "❌ Нельзя закрыть день\n"
+                    f"Спред отрицательный: {spread}"
+                )
+                return
+
+            residual_balance = obj.balance - spread
+
             summary_text = (
-                "Итоги дня:\n"
-                f"Баланс: {obj.balance}\n"
+                "📊 Сводка за день\n\n"
                 f"Приход: {obj.income}\n"
                 f"Фикс: {obj.fixed}\n"
                 f"Выдачи: {obj.payouts}\n"
-                f"Спред: {obj.income - obj.fixed}"
+                f"Спред: {spread}\n\n"
+                f"💰 Остаточный баланс: {residual_balance}"
             )
 
-            obj.opening_balance = obj.balance
+            obj.opening_balance = residual_balance
+            obj.balance = residual_balance
             obj.income = 0
             obj.fixed = 0
             obj.payouts = 0
@@ -81,6 +108,7 @@ async def handle(msg: types.Message):
                 db.close()
         return
 
+    # /reset_chat
     if lower_text.startswith("/reset_chat"):
         db = None
         try:
@@ -107,66 +135,63 @@ async def handle(msg: types.Message):
                 db.close()
         return
 
-    strict_match = STRICT_RE.match(lower_text)
-
-    if strict_match:
-        cmd, amount = strict_match.groups()
-        amount = int(amount)
+    # 1. Строгая команда: приход 100 / фикс 50 / выдача 20
+    strict = STRICT_RE.fullmatch(text)
+    if strict:
+        command = strict.group(1).lower()
+        value = amount_value(strict.group(2))
 
         db = None
         try:
             obj, db = get_or_create(msg.chat.id)
 
-            if cmd == "приход":
-                obj.balance += amount
-                obj.income += amount
-                add_operation(db, msg.chat.id, "income", amount)
+            if command == "приход":
+                obj.balance += value
+                obj.income += value
+                add_operation(db, msg.chat.id, "income", value)
 
-            elif cmd == "фикс":
-                obj.fixed += amount
-                add_operation(db, msg.chat.id, "fixed", amount)
+            elif command == "фикс":
+                obj.fixed += value
+                add_operation(db, msg.chat.id, "fixed", value)
 
-            elif cmd == "выдача":
-                obj.balance -= amount
-                obj.payouts += amount
-                add_operation(db, msg.chat.id, "payouts", amount)
+            elif command == "выдача":
+                obj.balance -= value
+                obj.payouts += value
+                add_operation(db, msg.chat.id, "payouts", value)
 
             db.commit()
-            db.refresh(obj)
-
-            await msg.answer(f"✅ Записано: {cmd} {amount}")
 
         except Exception:
             if db is not None:
                 db.rollback()
             logger.exception("strict command failed")
-            await msg.answer("Ошибка при сохранении операции")
         finally:
             if db is not None:
                 db.close()
+
+        # Успешные команды обрабатываются молча
         return
 
-    loose_match = LOOSE_RE.match(lower_text)
-    if not loose_match:
+    # 2. Похожая команда с опечаткой: фис 100 / выдча 50
+    loose = LOOSE_RE.fullmatch(text)
+    if not loose:
         return
 
-    maybe_cmd, rest = loose_match.groups()
-    suggestion = closest_command(maybe_cmd)
+    first_word = loose.group(1)
+    amount = loose.group(2)
 
-    if suggestion and maybe_cmd not in VALID_COMMANDS:
-        if rest.strip().isdigit():
-            await msg.answer(
-                f"❌ Похоже, команда написана с ошибкой.\n"
-                f"Попробуй так: `{suggestion} {rest.strip()}`",
-                parse_mode="Markdown",
-            )
-        else:
-            await msg.answer(
-                "❌ Неверный формат.\n"
-                "Используй:\n"
-                "`приход 100`\n"
-                "`фикс 50`\n"
-                "`выдача 20`",
-                parse_mode="Markdown",
-            )
+    # Если это не кириллица — молчим
+    if not CYR_RE.fullmatch(first_word):
         return
+
+    suggestion = closest_command(first_word)
+
+    if suggestion and suggestion != first_word.lower():
+        await msg.answer(
+            f"Ошибка в сообщении\n"
+            f"Похоже, вы имели в виду: {suggestion} {amount}"
+        )
+        return
+
+    # Всё остальное игнорируем
+    return
