@@ -37,3 +37,16 @@ async def handle(msg: types.Message):
     db.commit()
     db.close()
     await msg.answer(f"OK chat_id={msg.chat.id} | {cmd} {amount}")
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+
+@dp.message(commands=["dashboard"])
+async def dashboard(msg: types.Message):
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text="Открыть дашборд",
+            web_app=WebAppInfo(
+                url=f"https://miniapp-production-2f44.up.railway.app/?startapp=group_{msg.chat.id}"
+            )
+        )]
+    ])
+    await msg.answer("Открой дашборд:", reply_markup=kb)
