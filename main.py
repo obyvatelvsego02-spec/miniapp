@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from aiogram.types import Update
@@ -6,6 +8,9 @@ from bot import bot, dp
 from db import Base, engine
 from models import Operation
 from services import get_or_create
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -25,24 +30,37 @@ app.add_middleware(
 
 Base.metadata.create_all(bind=engine)
 
+logger.info("MAIN.PY LOADED | version=debug-2026-03-24-01")
+
 
 @app.get("/")
 def root():
+    logger.info("ROOT HIT")
     return {"ok": True}
 
 
 @app.post("/webhook")
 async def webhook(req: Request):
-    data = await req.json()
-    update = Update(**data)
-    await dp.feed_update(bot, update)
-    return {"ok": True}
+    try:
+        data = await req.json()
+        logger.info("WEBHOOK HIT | keys=%s", list(data.keys()))
+        logger.info("WEBHOOK RAW UPDATE TYPE | has_message=%s", "message" in data)
+
+        update = Update(**data)
+        await dp.feed_update(bot, update)
+
+        logger.info("WEBHOOK PROCESSED OK")
+        return {"ok": True}
+    except Exception:
+        logger.exception("WEBHOOK FAILED")
+        return {"ok": False}
 
 
 @app.get("/api/dashboard/{chat_id}")
 def dashboard(chat_id: int):
-    obj, db = get_or_create(chat_id)
+    logger.info("DASHBOARD HIT | chat_id=%s", chat_id)
 
+    obj, db = get_or_create(chat_id)
     spread = obj.income - obj.fixed
 
     operations = (
@@ -83,4 +101,5 @@ def dashboard(chat_id: int):
     }
 
     db.close()
+    logger.info("DASHBOARD OK | chat_id=%s", chat_id)
     return result
