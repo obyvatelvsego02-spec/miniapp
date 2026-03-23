@@ -1,3 +1,4 @@
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from aiogram import Bot, Dispatcher, types
 import re
 from services import get_or_create
@@ -37,7 +38,6 @@ async def handle(msg: types.Message):
     db.commit()
     db.close()
     await msg.answer(f"OK chat_id={msg.chat.id} | {cmd} {amount}")
-    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 
 @dp.message(commands=["dashboard"])
 async def dashboard(msg: types.Message):
