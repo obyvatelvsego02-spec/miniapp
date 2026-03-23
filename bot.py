@@ -36,3 +36,4 @@ async def handle(msg: types.Message):
 
     db.commit()
     db.close()
+    await msg.answer(f"OK chat_id={msg.chat.id} | {cmd} {amount}")
