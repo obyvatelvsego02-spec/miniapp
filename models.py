@@ -9,6 +9,7 @@ class ChatData(Base):
     id = Column(Integer, primary_key=True)
     chat_id = Column(BigInteger, unique=True, index=True)
 
+    opening_balance = Column(Integer, default=0)
     balance = Column(Integer, default=0)
     income = Column(Integer, default=0)
     fixed = Column(Integer, default=0)
@@ -20,6 +21,6 @@ class Operation(Base):
 
     id = Column(Integer, primary_key=True)
     chat_id = Column(BigInteger, index=True)
-    type = Column(String, nullable=False)   # income / fixed / payouts
+    type = Column(String, nullable=False)
     amount = Column(Integer, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
