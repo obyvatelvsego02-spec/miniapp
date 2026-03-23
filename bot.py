@@ -20,7 +20,7 @@ async def dashboard(msg: types.Message):
                 InlineKeyboardButton(
                     text="Открыть дашборд",
                     web_app=WebAppInfo(
-                        url=f"https://miniapp-phi-umber.vercel.app/?startapp=group_{msg.chat.id}"
+                        url=f"https://miniapp-phi-umber.vercel.app/?chat_id={msg.chat.id}"
                     ),
                 )
             ]
