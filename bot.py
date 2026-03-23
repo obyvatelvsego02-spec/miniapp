@@ -1,7 +1,7 @@
 import re
 
 from aiogram import Bot, Dispatcher, types
-from services import get_or_create
+from services import get_or_create, add_operation
 
 BOT_TOKEN = "8748520635:AAFmBhQuFP-U31dDlwcHddpObPMzN27hqLI"
 
@@ -34,13 +34,16 @@ async def handle(msg: types.Message):
     if cmd == "приход":
         obj.balance += amount
         obj.income += amount
+        add_operation(db, msg.chat.id, "income", amount)
 
     elif cmd == "фикс":
         obj.fixed += amount
+        add_operation(db, msg.chat.id, "fixed", amount)
 
     elif cmd == "выдача":
         obj.balance -= amount
         obj.payouts += amount
+        add_operation(db, msg.chat.id, "payouts", amount)
 
     db.commit()
     db.close()
