@@ -1,0 +1,162 @@
+const tg = window.Telegram?.WebApp;
+if (tg) {
+  tg.ready();
+  tg.expand();
+  try {
+    tg.setHeaderColor('#0b1730');
+    tg.setBackgroundColor('#07111f');
+  } catch (_) {}
+}
+
+const byId = (id) => document.getElementById(id);
+const fmt = (value) => {
+  const num = Number(value || 0);
+  return num.toLocaleString('ru-RU', {
+    minimumFractionDigits: Number.isInteger(num) ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
+};
+
+let currentData = null;
+let currentTab = 'payouts';
+
+function setMetric(id, value, suffix = '') {
+  byId(id).textContent = `${fmt(value)}${suffix}`;
+}
+
+function setTabs(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach((btn) => {
+    btn.classList.toggle('is-active', btn.dataset.open === tab);
+  });
+}
+
+function emptyState(text = 'Нет данных') {
+  return `
+    <div class="empty-state">
+      <div class="empty-state__icon">∿</div>
+      <div class="empty-state__title">${text}</div>
+      <div class="empty-state__text">Как только в чате появятся операции, они будут видны здесь.</div>
+    </div>
+  `;
+}
+
+function rowTemplate(title, subtitle, amount, kind = 'neutral') {
+  const cls = kind === 'negative' ? 'is-negative' : kind === 'positive' ? 'is-positive' : '';
+  return `
+    <div class="history-row">
+      <div class="history-row__dot"></div>
+      <div class="history-row__main">
+        <div class="history-row__title">${title}</div>
+        <div class="history-row__subtitle">${subtitle}</div>
+      </div>
+      <div class="history-row__amount ${cls}">${fmt(amount)}</div>
+    </div>
+  `;
+}
+
+function renderList(tab, data) {
+  const body = byId('historyBody');
+  const title = byId('historyTitle');
+  const badge = byId('historyBadge');
+  const history = data.history || {};
+
+  const config = {
+    payouts: { title: 'Последние выдачи', badge: 'Сегодня' },
+    income: { title: 'История приходов', badge: `${fmt(data.income)} за день` },
+    fixed: { title: 'История фиксов', badge: `${fmt(data.fixed)} за день` },
+    balance: { title: 'Движение баланса', badge: 'Текущая точка' },
+    spread: { title: 'Спред за день', badge: 'Текущий итог' },
+  };
+
+  title.textContent = config[tab].title;
+  badge.textContent = config[tab].badge;
+
+  if (tab === 'balance') {
+    body.innerHTML = [
+      rowTemplate('Текущий баланс', 'После всех операций', data.balance, data.balance < 0 ? 'negative' : 'positive'),
+      rowTemplate('Старт дня', 'Остаток на начало дня', data.opening_balance),
+      rowTemplate('Выдачи', 'Списано за день', -Math.abs(data.payouts), 'negative'),
+    ].join('');
+    return;
+  }
+
+  if (tab === 'spread') {
+    body.innerHTML = rowTemplate(
+      'Текущий спред',
+      'Приходы минус фиксы',
+      data.spread,
+      data.spread < 0 ? 'negative' : 'positive'
+    );
+    return;
+  }
+
+  const items = history[tab] || [];
+  if (!items.length) {
+    body.innerHTML = emptyState('Пока пусто');
+    return;
+  }
+
+  body.innerHTML = items.map((item, index) => {
+    const amount = Number(item.amount || 0);
+    const labels = {
+      payouts: 'Выдача',
+      income: 'Приход',
+      fixed: 'Фикс',
+    };
+    const kinds = {
+      payouts: 'negative',
+      income: 'positive',
+      fixed: 'neutral',
+    };
+    return rowTemplate(
+      `${labels[tab]} #${items.length - index}`,
+      item.at || 'Без времени',
+      amount,
+      kinds[tab]
+    );
+  }).join('');
+}
+
+function render(data) {
+  currentData = data;
+  setMetric('balanceValue', data.balance);
+  setMetric('spreadValue', data.spread);
+  setMetric('payoutsValue', data.payouts);
+  setMetric('incomeValue', data.income);
+  setMetric('fixedValue', data.fixed);
+  byId('chatTitle').textContent = data.chat_title || 'Группа';
+  renderList(currentTab, data);
+}
+
+async function load() {
+  const startParam = tg?.initDataUnsafe?.start_param || new URLSearchParams(location.search).get('startapp') || '';
+  const match = String(startParam).match(/group_(-?\d+)/);
+  if (!match) {
+    byId('historyBody').innerHTML = emptyState('Нет chat_id в ссылке');
+    byId('chatTitle').textContent = 'Открой дашборд из группы';
+    return;
+  }
+
+  const chatId = match[1];
+  try {
+    const res = await fetch(`/api/chat/${encodeURIComponent(chatId)}`);
+    if (!res.ok) throw new Error('load failed');
+    const data = await res.json();
+    render(data);
+  } catch (e) {
+    byId('historyBody').innerHTML = emptyState('Не удалось загрузить данные');
+    byId('chatTitle').textContent = 'Проверь, есть ли операции в этом чате';
+  }
+}
+
+byId('refreshBtn').addEventListener('click', load);
+document.querySelectorAll('[data-open]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    setTabs(btn.dataset.open);
+    if (currentData) renderList(currentTab, currentData);
+  });
+});
+
+load();
+setInterval(load, 5000);
