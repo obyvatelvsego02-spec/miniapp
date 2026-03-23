@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Finance Dashboard</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">Mini App</div>
+        <h1>Дашборд группы</h1>
+      </div>
+      <button id="refreshBtn" class="ghost-btn">Обновить</button>
+    </header>
+
+    <section class="grid">
+      <button class="card primary" data-open="balance">
+        <span class="label">Баланс</span>
+        <span class="value" id="balanceValue">—</span>
+      </button>
+      <button class="card" data-open="spread">
+        <span class="label">Спред</span>
+        <span class="value" id="spreadValue">—</span>
+      </button>
+      <button class="card" data-open="payouts">
+        <span class="label">Выдачи</span>
+        <span class="value" id="payoutsValue">—</span>
+      </button>
+      <button class="card" data-open="income">
+        <span class="label">Приход за день</span>
+        <span class="value" id="incomeValue">—</span>
+      </button>
+      <button class="card" data-open="fixed">
+        <span class="label">Фикс за день</span>
+        <span class="value" id="fixedValue">—</span>
+      </button>
+    </section>
+
+    <section class="history-card">
+      <div class="history-head">
+        <h2 id="historyTitle">Последние выдачи</h2>
+        <span id="chatTitle">—</span>
+      </div>
+      <div id="historyBody" class="history-list">
+        <div class="empty">Нет данных</div>
+      </div>
+    </section>
+  </div>
+
+  <script src="./script.js"></script>
+</body>
+</html>

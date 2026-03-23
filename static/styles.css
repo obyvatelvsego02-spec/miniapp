@@ -1,0 +1,52 @@
+:root {
+  --bg: #0b1020;
+  --card: #151c33;
+  --card-2: #1b2441;
+  --text: #f3f6ff;
+  --muted: #9aa7c7;
+  --accent: #67a3ff;
+  --border: rgba(255,255,255,0.08);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, Inter, Segoe UI, sans-serif;
+  background: linear-gradient(180deg, #09101d 0%, #0e1730 100%);
+  color: var(--text);
+}
+.app { padding: 18px; max-width: 860px; margin: 0 auto; }
+.topbar { display:flex; justify-content:space-between; align-items:flex-start; gap: 12px; margin-bottom: 16px; }
+.eyebrow { color: var(--muted); font-size: 13px; margin-bottom: 4px; }
+h1 { margin:0; font-size: 28px; }
+.ghost-btn {
+  border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: var(--text);
+  border-radius: 14px; padding: 10px 14px; cursor: pointer;
+}
+.grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; margin-bottom: 16px; }
+.card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 22px; padding: 18px;
+  text-align:left; cursor:pointer; color: var(--text);
+}
+.card.primary { grid-column: 1 / -1; background: linear-gradient(135deg, #1a2a54, #15203c); }
+.label { display:block; color: var(--muted); margin-bottom: 10px; font-size: 14px; }
+.value { display:block; font-size: 32px; font-weight: 700; }
+.history-card {
+  background: var(--card-2); border: 1px solid var(--border); border-radius: 22px; padding: 18px;
+}
+.history-head { display:flex; justify-content:space-between; gap: 12px; align-items: center; margin-bottom: 12px; }
+.history-head h2 { margin:0; font-size: 20px; }
+#chatTitle { color: var(--muted); font-size: 14px; }
+.history-list { display:grid; gap: 10px; }
+.history-row {
+  display:flex; justify-content:space-between; gap: 12px; align-items:center;
+  padding: 12px 14px; background: rgba(255,255,255,0.04); border-radius: 16px;
+}
+.row-amount { font-size: 18px; font-weight: 600; }
+.row-time { color: var(--muted); font-size: 13px; }
+.empty { color: var(--muted); padding: 8px 0; }
+@media (max-width: 560px) {
+  .grid { grid-template-columns: 1fr; }
+  .card.primary { grid-column: auto; }
+  .value { font-size: 28px; }
+  h1 { font-size: 24px; }
+}
