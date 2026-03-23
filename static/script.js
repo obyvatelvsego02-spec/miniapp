@@ -140,7 +140,7 @@ async function load() {
 
   const chatId = match[1];
   try {
-    const res = await fetch(`/api/dashboard/${encodeURIComponent(chatId)}`);
+    const res = await fetch(`https://miniapp-production-2f44.up.railway.app/api/dashboard/${encodeURIComponent(chatId)}`);
     if (!res.ok) throw new Error('load failed');
     const data = await res.json();
     render(data);
