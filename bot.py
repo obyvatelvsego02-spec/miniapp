@@ -1,11 +1,9 @@
 import re
 
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
-
 from services import get_or_create
 
-BOT_TOKEN = "8748520635:AAFmBhQuFP-U31dDlwcHddpObPMzN27hqLI"
+BOT_TOKEN = "ТУТ_ТВОЙ_ТОКЕН"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
@@ -19,10 +17,10 @@ async def handle(msg: types.Message):
     text = msg.text.lower().strip()
 
     if text.startswith("/dashboard"):
-    await msg.answer(
-        f"Открой дашборд:\nhttps://t.me/OnyxKent_bot/dashboard?startapp=group_{msg.chat.id}"
-    )
-    return
+        await msg.answer(
+            f"Открой дашборд:\nhttps://t.me/OnyxKent_bot/dashboard?startapp=group_{msg.chat.id}"
+        )
+        return
 
     match = re.match(r"^(приход|фикс|выдача)\s+(\d+)$", text)
     if not match:
