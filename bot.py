@@ -6,7 +6,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from services import get_or_create, add_operation
 
-BOT_TOKEN = "8748520635:AAFmBhQuFP-U31dDlwcHddpObPMzN27hqLI"
+BOT_TOKEN = "ТУТ_ТВОЙ_ТОКЕН"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
@@ -52,22 +52,22 @@ async def handle(msg: types.Message):
         obj, db = get_or_create(msg.chat.id)
 
         if cmd == "приход":
-    obj.balance += amount
-    obj.income += amount
-    add_operation(db, msg.chat.id, "income", amount)
+            obj.balance += amount
+            obj.income += amount
+            add_operation(db, msg.chat.id, "income", amount)
 
-elif cmd == "фикс":
-    obj.fixed += amount
-    add_operation(db, msg.chat.id, "fixed", amount)
+        elif cmd == "фикс":
+            obj.fixed += amount
+            add_operation(db, msg.chat.id, "fixed", amount)
 
-elif cmd == "выдача":
-    obj.balance -= amount
-    obj.payouts += amount
-    add_operation(db, msg.chat.id, "payouts", amount)
+        elif cmd == "выдача":
+            obj.balance -= amount
+            obj.payouts += amount
+            add_operation(db, msg.chat.id, "payouts", amount)
 
-db.commit()
-db.close()
-return
+        db.commit()
+        db.close()
+        return
 
     loose_match = LOOSE_RE.match(lower_text)
     if not loose_match:
