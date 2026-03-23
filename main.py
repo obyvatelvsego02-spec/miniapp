@@ -53,10 +53,10 @@ def dashboard(chat_id: int):
         "chat_title": f"Чат {chat_id}",
         "opening_balance": 0,
         "history": {
-            "payouts": [],
-            "income": [],
-            "fixed": [],
-        },
+    "payouts": [{"amount": obj.payouts, "at": "Сейчас"}] if obj.payouts else [],
+    "income": [{"amount": obj.income, "at": "Сейчас"}] if obj.income else [],
+    "fixed": [{"amount": obj.fixed, "at": "Сейчас"}] if obj.fixed else [],
+},
     }
 
     db.close()
