@@ -151,6 +151,10 @@ async def handle(msg: types.Message):
                 obj.payouts += value
                 add_operation(db, msg.chat.id, "payouts", value)
 
+            elif command == "спред":
+                obj.manual_spread += value
+                add_operation(db, msg.chat.id, "manual_spread", value)
+
             db.commit()
 
         except Exception:
