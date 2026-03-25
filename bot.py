@@ -68,27 +68,19 @@ async def handle(msg: types.Message):
         try:
             obj, db = get_or_create(msg.chat.id)
 
-            spread = obj.income - obj.fixed
-            if spread < 0:
-                await msg.answer(
-                    "❌ Нельзя закрыть день\n"
-                    f"Спред отрицательный: {spread}"
-                )
-                return
-
-            residual_balance = obj.balance - spread
+            day_balance = obj.income - obj.payouts
 
             summary_text = (
                 "📊 Сводка за день\n\n"
                 f"Приход: {obj.income}\n"
                 f"Фикс: {obj.fixed}\n"
                 f"Выдачи: {obj.payouts}\n"
-                f"Спред: {spread}\n\n"
-                f"💰 Остаточный баланс: {residual_balance}"
+                f"Спред: {obj.income - obj.fixed}\n\n"
+                f"💰 Баланс дня: {day_balance}"
             )
 
-            obj.opening_balance = residual_balance
-            obj.balance = residual_balance
+            obj.opening_balance = day_balance
+            obj.balance = day_balance
             obj.income = 0
             obj.fixed = 0
             obj.payouts = 0
@@ -135,7 +127,7 @@ async def handle(msg: types.Message):
                 db.close()
         return
 
-    # 1. Строгая команда: приход 100 / фикс 50 / выдача 20
+    # Строгая команда: приход 100 / фикс 50 / выдача 20
     strict = STRICT_RE.fullmatch(text)
     if strict:
         command = strict.group(1).lower()
@@ -169,10 +161,9 @@ async def handle(msg: types.Message):
             if db is not None:
                 db.close()
 
-        # Успешные команды обрабатываются молча
         return
 
-    # 2. Похожая команда с опечаткой: фис 100 / выдча 50
+    # Похожая команда с опечаткой: фис 100 / выдча 50
     loose = LOOSE_RE.fullmatch(text)
     if not loose:
         return
@@ -193,5 +184,4 @@ async def handle(msg: types.Message):
         )
         return
 
-    # Всё остальное игнорируем
     return
