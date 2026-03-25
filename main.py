@@ -7,7 +7,7 @@ from aiogram.types import Update
 from bot import bot, dp
 from db import Base, engine
 from models import Operation
-from services import get_or_create
+from services import delete_operation_and_recalculate, get_or_create
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -45,6 +45,7 @@ async def webhook(req: Request):
     return {"ok": True}
 
 
+# 🔹 ДАШБОРД
 @app.get("/api/dashboard/{chat_id}")
 def dashboard(chat_id: int):
     obj, db = get_or_create(chat_id)
@@ -66,6 +67,7 @@ def dashboard(chat_id: int):
 
         for op in operations:
             item = {
+                "id": op.id,  # 🔥 добавили id
                 "amount": op.amount,
                 "at": op.created_at.strftime("%d.%m %H:%M"),
             }
@@ -77,7 +79,7 @@ def dashboard(chat_id: int):
             elif op.type == "payouts":
                 history["payouts"].append(item)
 
-        result = {
+        return {
             "balance": obj.balance,
             "income": obj.income,
             "fixed": obj.fixed,
@@ -88,21 +90,11 @@ def dashboard(chat_id: int):
             "history": history,
         }
 
-        logger.info(
-            "DASHBOARD | chat_id=%s | balance=%s | income=%s | fixed=%s | payouts=%s | ops=%s",
-            chat_id,
-            obj.balance,
-            obj.income,
-            obj.fixed,
-            obj.payouts,
-            len(operations),
-        )
-
-        return result
     finally:
         db.close()
 
 
+# 🔹 DEBUG (оставляем как есть)
 @app.get("/api/debug/{chat_id}")
 def debug_chat(chat_id: int):
     obj, db = get_or_create(chat_id)
@@ -134,5 +126,59 @@ def debug_chat(chat_id: int):
                 for op in operations[:20]
             ],
         }
+    finally:
+        db.close()
+
+
+# 🔥 УДАЛЕНИЕ ОПЕРАЦИИ
+@app.post("/api/operation/delete/{operation_id}")
+def delete_operation(operation_id: int, chat_id: int):
+    obj, db = get_or_create(chat_id)
+
+    try:
+        result = delete_operation_and_recalculate(db, operation_id, chat_id)
+
+        if not result:
+            return {"ok": False, "error": "operation not found"}
+
+        spread = obj.income - obj.fixed
+
+        operations = (
+            db.query(Operation)
+            .filter_by(chat_id=chat_id)
+            .order_by(Operation.created_at.desc())
+            .all()
+        )
+
+        history = {
+            "payouts": [],
+            "income": [],
+            "fixed": [],
+        }
+
+        for op in operations:
+            item = {
+                "id": op.id,
+                "amount": op.amount,
+                "at": op.created_at.strftime("%d.%m %H:%M"),
+            }
+
+            if op.type == "income":
+                history["income"].append(item)
+            elif op.type == "fixed":
+                history["fixed"].append(item)
+            elif op.type == "payouts":
+                history["payouts"].append(item)
+
+        return {
+            "ok": True,
+            "balance": obj.balance,
+            "income": obj.income,
+            "fixed": obj.fixed,
+            "payouts": obj.payouts,
+            "spread": spread,
+            "history": history,
+        }
+
     finally:
         db.close()
