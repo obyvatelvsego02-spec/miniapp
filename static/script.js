@@ -132,6 +132,7 @@ function render(data, chatId) {
 
   setMetric('balanceValue', data.balance);
   setMetric('spreadValue', data.spread);
+  setMetric('manualSpreadValue', data.manual_spread);
   setMetric('payoutsValue', data.payouts);
   setMetric('incomeValue', data.income);
   setMetric('fixedValue', data.fixed);
