@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-VALID_COMMANDS = ["приход", "фикс", "выдача"]
+VALID_COMMANDS = ["приход", "фикс", "выдача", "спред"]
 
 STRICT_RE = re.compile(
-    r"^(приход|фикс|выдача)\s+(\d+(?:[.,]\d+)?)$",
+    r"^(приход|фикс|выдача|спред)\s+(\d+(?:[.,]\d+)?)$",
     re.IGNORECASE
 )
 
