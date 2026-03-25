@@ -43,10 +43,12 @@ function emptyState(text = 'Нет данных') {
   `;
 }
 
-function rowTemplate(title, subtitle, amount, kind = 'neutral') {
+function rowTemplate(id, title, subtitle, amount, kind = 'neutral') {
   const cls = kind === 'negative' ? 'is-negative' : kind === 'positive' ? 'is-positive' : '';
+  const clickable = id ? 'is-clickable' : '';
+
   return `
-    <div class="history-row">
+    <div class="history-row ${clickable}" ${id ? `data-operation-id="${id}"` : ''}>
       <div class="history-row__dot"></div>
       <div class="history-row__main">
         <div class="history-row__title">${title}</div>
@@ -76,20 +78,16 @@ function renderList(tab, data) {
 
   if (tab === 'balance') {
     body.innerHTML = [
-      rowTemplate(
-        'Текущий баланс',
-        'После всех операций',
-        data.balance,
-        data.balance < 0 ? 'negative' : 'positive'
-      ),
-      rowTemplate('Старт дня', 'Остаток на начало дня', data.opening_balance),
-      rowTemplate('Выдачи', 'Списано за день', -Math.abs(data.payouts), 'negative'),
+      rowTemplate(null, 'Текущий баланс', 'После всех операций', data.balance, data.balance < 0 ? 'negative' : 'positive'),
+      rowTemplate(null, 'Старт дня', 'Остаток на начало дня', data.opening_balance),
+      rowTemplate(null, 'Выдачи', 'Списано за день', -Math.abs(data.payouts), 'negative'),
     ].join('');
     return;
   }
 
   if (tab === 'spread') {
     body.innerHTML = rowTemplate(
+      null,
       'Текущий спред',
       'Приходы минус фиксы',
       data.spread,
@@ -106,11 +104,13 @@ function renderList(tab, data) {
 
   body.innerHTML = items.map((item, index) => {
     const amount = Number(item.amount || 0);
+
     const labels = {
       payouts: 'Выдача',
       income: 'Приход',
       fixed: 'Фикс',
     };
+
     const kinds = {
       payouts: 'negative',
       income: 'positive',
@@ -118,6 +118,7 @@ function renderList(tab, data) {
     };
 
     return rowTemplate(
+      item.id,
       `${labels[tab]} #${items.length - index}`,
       item.at || 'Без времени',
       amount,
@@ -149,61 +150,65 @@ function resolveChatId() {
   return directChatId || (match ? match[1] : null);
 }
 
+async function deleteOperation(operationId, chatId) {
+  const ok = window.confirm('Удалить эту операцию?');
+  if (!ok) return;
+
+  const apiUrl = `https://miniapp-production-2f44.up.railway.app/api/operation/delete/${operationId}?chat_id=${chatId}`;
+
+  try {
+    const res = await fetch(apiUrl, { method: 'POST' });
+    const data = await res.json();
+
+    if (!data.ok) {
+      throw new Error(data.error || 'delete failed');
+    }
+
+    render({
+      ...currentData,
+      ...data
+    }, chatId);
+
+  } catch (e) {
+    console.error(e);
+    alert('Ошибка удаления');
+  }
+}
+
 async function load() {
   const chatId = resolveChatId();
 
   if (!chatId) {
-    byId('historyBody').innerHTML = emptyState('Нет chat_id в ссылке');
-    byId('chatTitle').textContent = 'Открой дашборд из группы';
+    byId('historyBody').innerHTML = emptyState('Нет chat_id');
     return;
   }
 
-  const apiUrl = `https://miniapp-production-2f44.up.railway.app/api/dashboard/${encodeURIComponent(chatId)}?t=${Date.now()}`;
+  const res = await fetch(
+    `https://miniapp-production-2f44.up.railway.app/api/dashboard/${chatId}?t=${Date.now()}`
+  );
 
-  try {
-    const res = await fetch(apiUrl, {
-      method: 'GET',
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        Pragma: 'no-cache',
-        Expires: '0',
-      },
-    });
-
-    if (!res.ok) {
-      throw new Error(`load failed: ${res.status}`);
-    }
-
-    const data = await res.json();
-
-    console.log('DASHBOARD LOAD OK', {
-      chatId,
-      apiUrl,
-      data,
-    });
-
-    render(data, chatId);
-  } catch (e) {
-    console.error('DASHBOARD LOAD ERROR', {
-      chatId,
-      apiUrl,
-      error: e,
-    });
-
-    byId('historyBody').innerHTML = emptyState('Не удалось загрузить данные');
-    byId('chatTitle').textContent = `Проверь данные · chat_id: ${chatId}`;
-  }
+  const data = await res.json();
+  render(data, chatId);
 }
+
+byId('historyBody').addEventListener('click', (e) => {
+  const row = e.target.closest('[data-operation-id]');
+  if (!row) return;
+
+  const id = row.dataset.operationId;
+  const chatId = resolveChatId();
+
+  if (!id || !chatId) return;
+
+  deleteOperation(id, chatId);
+});
 
 byId('refreshBtn').addEventListener('click', load);
 
 document.querySelectorAll('[data-open]').forEach((btn) => {
   btn.addEventListener('click', () => {
     setTabs(btn.dataset.open);
-    if (currentData) {
-      renderList(currentTab, currentData);
-    }
+    if (currentData) renderList(currentTab, currentData);
   });
 });
 
