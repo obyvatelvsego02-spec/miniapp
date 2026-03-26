@@ -71,21 +71,25 @@ async def handle(msg: types.Message):
             regular_spread = obj.income - obj.fixed
             manual_spread = obj.manual_spread or 0
             total_spread = regular_spread + manual_spread
+
             day_balance = obj.income - obj.payouts
+            closing_balance = (obj.opening_balance or 0) + obj.income - obj.payouts
 
             summary_text = (
                 "📊 Сводка за день\n\n"
+                f"Старт дня: {obj.opening_balance}\n"
                 f"Приход: {obj.income}\n"
                 f"Фикс: {obj.fixed}\n"
                 f"Выдачи: {obj.payouts}\n"
                 f"Спред: {regular_spread}\n"
                 f"Спред (ручной): {manual_spread}\n"
-                f"Общий спред: {total_spread}\n\n"
-                f"💰 Баланс дня: {day_balance}"
+                f"Общий спред: {total_spread}\n"
+                f"Баланс дня: {day_balance}\n\n"
+                f"💰 Переносимый остаток: {closing_balance}"
             )
 
-            obj.opening_balance = day_balance
-            obj.balance = day_balance
+            obj.opening_balance = closing_balance
+            obj.balance = closing_balance
             obj.income = 0
             obj.fixed = 0
             obj.payouts = 0
@@ -105,7 +109,7 @@ async def handle(msg: types.Message):
             if db is not None:
                 db.close()
         return
-
+        
     # /reset_chat
     if lower_text.startswith("/reset_chat"):
         db = None
