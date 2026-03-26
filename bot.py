@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-VALID_COMMANDS = ["приход", "фикс", "выдача", "спред"]
+VALID_COMMANDS = ["приход", "фикс", "выдача", "спред", "остаток"]
 
 STRICT_RE = re.compile(
-    r"^(приход|фикс|выдача|спред)\s+(\d+(?:[.,]\d+)?)$",
+    r"^(приход|фикс|выдача|спред|остаток)\s+(\d+(?:[.,]\d+)?)$",
     re.IGNORECASE
 )
 
@@ -152,15 +152,19 @@ async def handle(msg: types.Message):
             elif command == "фикс":
                 obj.fixed += value
                 add_operation(db, msg.chat.id, "fixed", value)
-
+            
             elif command == "выдача":
                 obj.balance -= value
                 obj.payouts += value
                 add_operation(db, msg.chat.id, "payouts", value)
-
+            
             elif command == "спред":
                 obj.manual_spread += value
                 add_operation(db, msg.chat.id, "manual_spread", value)
+            
+            elif command == "остаток":
+                obj.opening_balance = value
+                obj.balance = value + obj.income - obj.payouts
 
             db.commit()
 
