@@ -68,6 +68,9 @@ async def handle(msg: types.Message):
         try:
             obj, db = get_or_create(msg.chat.id)
 
+            regular_spread = obj.income - obj.fixed
+            manual_spread = obj.manual_spread or 0
+            total_spread = regular_spread + manual_spread
             day_balance = obj.income - obj.payouts
 
             summary_text = (
@@ -75,7 +78,9 @@ async def handle(msg: types.Message):
                 f"Приход: {obj.income}\n"
                 f"Фикс: {obj.fixed}\n"
                 f"Выдачи: {obj.payouts}\n"
-                f"Спред: {obj.income - obj.fixed}\n\n"
+                f"Спред: {regular_spread}\n"
+                f"Спред (ручной): {manual_spread}\n"
+                f"Общий спред: {total_spread}\n\n"
                 f"💰 Баланс дня: {day_balance}"
             )
 
@@ -84,6 +89,7 @@ async def handle(msg: types.Message):
             obj.income = 0
             obj.fixed = 0
             obj.payouts = 0
+            obj.manual_spread = 0
 
             clear_operations(db, msg.chat.id)
             db.commit()
@@ -111,6 +117,7 @@ async def handle(msg: types.Message):
             obj.income = 0
             obj.fixed = 0
             obj.payouts = 0
+            obj.manual_spread = 0
 
             clear_operations(db, msg.chat.id)
             db.commit()
