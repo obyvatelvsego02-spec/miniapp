@@ -15,6 +15,8 @@ class ChatData(Base):
     fixed = Column(Integer, default=0)
     payouts = Column(Integer, default=0)
     manual_spread = Column(Integer, default=0)
+    cap_amount = Column(Integer, default=0)
+    extra_expenses = Column(Integer, default=0)
 
 
 class Operation(Base):
