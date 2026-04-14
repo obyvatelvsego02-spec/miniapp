@@ -86,6 +86,7 @@ def dashboard(chat_id: int):
             "payouts": obj.payouts,
             "spread": spread,
             "manual_spread": obj.manual_spread or 0,
+            "cap_amount": obj.cap_amount or 0,
             "chat_title": f"Чат {chat_id}",
             "opening_balance": obj.opening_balance or 0,
             "history": history,
