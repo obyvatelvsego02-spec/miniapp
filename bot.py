@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-VALID_COMMANDS = ["приход", "фикс", "выдача", "спред", "остаток"]
+VALID_COMMANDS = ["приход", "фикс", "выдача", "спред", "остаток", "шапка", "расходы"]
 
 STRICT_RE = re.compile(
-    r"^(приход|фикс|выдача|спред|остаток)\s+(\d+(?:[.,]\d+)?)$",
+    r"^(приход|фикс|выдача|спред|остаток|шапка|расходы)\s+(\d+(?:[.,]\d+)?)$",
     re.IGNORECASE
 )
 
@@ -70,7 +70,9 @@ async def handle(msg: types.Message):
 
             regular_spread = obj.income - obj.fixed
             manual_spread = obj.manual_spread or 0
-            total_spread = regular_spread + manual_spread
+            cap_amount = obj.cap_amount or 0
+            extra_expenses = obj.extra_expenses or 0
+            total_spread = regular_spread + manual_spread - cap_amount - extra_expenses
 
             day_balance = obj.income - obj.payouts
             closing_balance = (obj.opening_balance or 0) + obj.income - obj.payouts
@@ -83,6 +85,8 @@ async def handle(msg: types.Message):
                 f"Выдачи: {obj.payouts}\n"
                 f"Спред: {regular_spread}\n"
                 f"Спред (ручной): {manual_spread}\n"
+                f"Шапка: {cap_amount}\n"
+                f"Расходы: {extra_expenses}\n"
                 f"Общий спред: {total_spread}\n"
                 f"Баланс дня: {day_balance}\n\n"
                 f"💰 Переносимый остаток: {closing_balance}"
@@ -94,6 +98,8 @@ async def handle(msg: types.Message):
             obj.fixed = 0
             obj.payouts = 0
             obj.manual_spread = 0
+            obj.cap_amount = 0
+            obj.extra_expenses = 0
 
             clear_operations(db, msg.chat.id)
             db.commit()
@@ -169,6 +175,12 @@ async def handle(msg: types.Message):
             elif command == "остаток":
                 obj.opening_balance = value
                 obj.balance = value + obj.income - obj.payouts
+
+            elif command == "шапка":
+                obj.cap_amount += value
+
+            elif command == "расходы":
+                obj.extra_expenses += value
 
             db.commit()
 
